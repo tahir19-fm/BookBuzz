@@ -4,30 +4,49 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import coil.compose.rememberAsyncImagePainter
+import coil.compose.rememberImagePainter
+import coil.request.ImageRequest
 import com.example.bookbuzz.R
-import com.example.bookbuzz.ui.theme.PrimaryReaderColor
+import com.example.bookbuzz.model.MBook
+import com.example.bookbuzz.navigation.ReaderScreens
+import com.example.bookbuzz.ui.theme.*
 import com.example.bookbuzz.utils.ReaderAppTextStyle
 import com.example.bookbuzz.utils.clickableWithoutRipple
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 
 
@@ -300,5 +319,228 @@ fun CustomSnackBar(
         }
             })
     }
+
+}
+
+@Composable
+fun FABContent(onTap: () -> Unit) {
+    FloatingActionButton(onClick = { onTap()},
+        shape = RoundedCornerShape(50.dp),
+        backgroundColor = SecondaryReaderColor) {
+        Icon(imageVector = Icons.Default.Add,
+            contentDescription = "Add a Book",
+            tint = Color.Black)
+
+    }
+
+}
+
+@Composable
+fun ReaderAppBar(
+    title: String,
+    icon: ImageVector? = null,
+    showProfile: Boolean = true,
+    navController: NavController,
+    onBackArrowClicked:() -> Unit = {}
+) {
+
+    TopAppBar(title = {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.background(
+            SecondaryReaderColor)){
+            if (showProfile) {
+                Icon(imageVector = Icons.Default.Favorite,
+                    contentDescription = "Logo Icon",
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .scale(0.9f)
+                )
+
+            }
+            if (icon != null) {
+                Icon(imageVector = icon, contentDescription = "arrow back",
+                    tint = Color.Red.copy(alpha = 0.7f),
+                    modifier = Modifier.clickable { onBackArrowClicked.invoke() })
+            }
+            Spacer(modifier = Modifier.width(40.dp) )
+            Text(text = title,
+                color = Color.Black,
+                style = ReaderAppTextStyle.subText,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+            )
+
+
+        }
+
+
+    },
+        actions = {
+            IconButton(onClick = {
+                FirebaseAuth.getInstance()
+                    .signOut().run {
+                        navController.navigate(ReaderScreens.SplashScreen.name){
+                            navController.currentBackStackEntry?.destination?.route?.let { popUpTo(it){
+                                inclusive=true
+                            } }
+                            launchSingleTop=true
+                        }
+                    }
+            }) {
+                if (showProfile) Row() {
+                    Icon(imageVector = Icons.Filled.Logout ,
+                        contentDescription = "Logout" ,
+                        // tint = Color.Green.copy(alpha = 0.4f)
+                    )
+                }else Box {}
+
+
+
+            }
+        },
+        backgroundColor = SecondaryReaderColor,
+        elevation = 0.dp,
+    modifier = Modifier.padding(0.dp))
+
+}
+
+@Composable
+fun TitleSection(modifier: Modifier = Modifier,
+                 label: String,color: Color= Color.White) {
+    Surface(modifier = modifier.padding(start = 5.dp, top = 1.dp), color = color) {
+        Column {
+            Text(text = label,
+                style = ReaderAppTextStyle.subText,
+                fontSize = 19.sp,
+                textAlign = TextAlign.Left)
+        }
+
+    }
+
+}
+
+
+
+
+@Composable
+fun BookRating(score: Double = 4.5) {
+    Surface(modifier = Modifier
+        .height(70.dp)
+        .padding(4.dp),
+        shape = RoundedCornerShape(56.dp),
+        elevation = 6.dp,
+        color = LightReaderColor) {
+        Column(modifier = Modifier.padding(4.dp)) {
+            Icon(imageVector = Icons.Filled.StarBorder, contentDescription = "Start",
+                modifier = Modifier.padding(3.dp))
+            Text(text = score.toString(), style = ReaderAppTextStyle.subText)
+
+        }
+
+    }
+
+
+}
+@Composable
+fun ListCard(book: MBook,
+             onPressDetails: (String) -> Unit = {}) {
+    val context = LocalContext.current
+    val resources = context.resources
+
+    val displayMetrics = resources.displayMetrics
+
+    val screenWidth = displayMetrics.widthPixels / displayMetrics.density
+    val spacing = 10.dp
+
+    Card(shape = RoundedCornerShape(29.dp),
+        backgroundColor = LightReaderColor,
+        elevation = 6.dp,
+        modifier = Modifier
+            .padding(16.dp)
+            .height(242.dp)
+            .width(202.dp)
+            .clickable {
+                //onPressDetails.invoke(book.title.toString())
+            }) {
+
+        Column(modifier = Modifier.width(screenWidth.dp - (spacing * 2)),
+            horizontalAlignment = Alignment.Start) {
+            Row(horizontalArrangement = Arrangement.Center) {
+
+                Image(rememberAsyncImagePainter(
+                    ImageRequest.Builder(LocalContext.current)
+                        .data(data = book.photoUrl)
+                        .allowHardware(false)
+                        .build()
+                ),
+                    contentDescription = "book image",
+                    modifier = Modifier
+                        .height(140.dp)
+                        .width(100.dp)
+                        .padding(start = 8.dp,4.dp))
+                Spacer(modifier = Modifier.width(50.dp))
+
+                Column(modifier = Modifier.padding(top = 25.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(imageVector = Icons.Rounded.FavoriteBorder,
+                        contentDescription = "Fav Icon",
+                        modifier = Modifier.padding(bottom = 1.dp))
+
+                    BookRating(score =book.rating!!)
+                }
+
+            }
+            Text(text = book.title.toString(), modifier = Modifier.padding(4.dp),
+                style=ReaderAppTextStyle.subText,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis)
+
+            Text(text = book.authors.toString(), modifier = Modifier.padding(4.dp),
+                style = ReaderAppTextStyle.lightText) }
+
+        val isStartedReading = remember {
+            mutableStateOf(false)
+        }
+
+        Row(horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.Bottom) {
+            isStartedReading.value = book.startedReading != null
+
+
+            RoundedButton(label = if (isStartedReading.value)  "Reading" else "Not Yet",
+                radius = 70)
+
+        }
+    }
+
+
+
+}
+
+
+@Composable
+fun RoundedButton(
+    label: String = "Reading",
+    radius: Int = 29,
+    onPress: () -> Unit = {}) {
+    Surface(modifier = Modifier.clip(RoundedCornerShape(
+        bottomEndPercent = radius,
+        topStartPercent = radius)),
+        color = Color(0xFF92CBDF)) {
+
+        Column(modifier = Modifier
+            .width(90.dp)
+            .heightIn(40.dp)
+            .clickable { onPress.invoke() },
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(text = label, style = TextStyle(color = Color.White,
+                fontSize = 15.sp),)
+
+        }
+
+    }
+
 
 }
